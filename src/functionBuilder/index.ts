@@ -11,6 +11,8 @@ import { commandErrorHandler, createStreamLogger } from "./logger";
 import firebase from "firebase-admin";
 import { getProjectId } from "../metadataService";
 import { db } from "../firebaseConfig";
+import fs from "fs";
+import path from "path";
 
 export const functionBuilder = async (
   req: any,
@@ -41,7 +43,9 @@ export const functionBuilder = async (
     const functionConfigPath = `_rowy_/settings/functions/${functionName}`;
 
     const streamLogger = await createStreamLogger(functionConfigPath);
-    await streamLogger.info(`Build started`);
+    await streamLogger.info(
+      `Build started. collectionType: ${collectionType}, tablePath: ${tablePath}, pathname: ${pathname}, functionName: ${functionName}`
+    );
     const buildFolderTimestamp = Date.now();
     const buildPath = `build/functionBuilder/builds/${buildFolderTimestamp}`;
 
@@ -100,11 +104,45 @@ export const functionBuilder = async (
 
       await streamLogger.info("Installing dependencies...");
       await asyncExecute(
-        `cd ${buildPath}; yarn install`,
+        `cd ${buildPath}; yarn install --mutex network`,
         commandErrorHandler({ user }, streamLogger)
       );
 
       await streamLogger.info(`Deploying ${functionName} to ${projectId}`);
+
+      const configFile = fs.readFileSync(
+        path.resolve(
+          __dirname,
+          `./builds/${buildFolderTimestamp}/src/functionConfig.js`
+        ),
+        "utf-8"
+      );
+      // replace all instances of // evaluate:require with evaluate:require
+      let modifiedConfigFile = configFile.replace(
+        /\/\/ evaluate:require/g,
+        "evaluate:require"
+      );
+      modifiedConfigFile = modifiedConfigFile.replace(
+        /\/\/ script:require/g,
+        "script:require"
+      );
+      modifiedConfigFile = modifiedConfigFile.replace(
+        /\/\/ extensionBody:require/g,
+        "extensionBody:require"
+      );
+      modifiedConfigFile = modifiedConfigFile.replace(
+        /\/\/ conditions:require/g,
+        "conditions:require"
+      );
+      fs.writeFileSync(
+        path.resolve(
+          __dirname,
+          `./builds/${buildFolderTimestamp}/src/functionConfig.js`
+        ),
+        modifiedConfigFile,
+        "utf-8"
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await asyncExecute(
         `cd ${buildPath}; yarn deploy --project ${projectId} --only functions`,
         commandErrorHandler({ user }, streamLogger),

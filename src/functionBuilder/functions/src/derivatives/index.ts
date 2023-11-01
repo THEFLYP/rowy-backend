@@ -3,7 +3,7 @@ import * as admin from "firebase-admin";
 import { db, auth, storage } from "../firebaseConfig";
 import utilFns from "../utils";
 import { LoggingFactory, RowyLogging } from "../logging";
-
+import { tableSchema } from "../functionConfig";
 const derivative =
   (
     functionConfig: {
@@ -17,6 +17,7 @@ const derivative =
         storage: admin.storage.Storage;
         utilFns: any;
         logging: RowyLogging;
+        tableSchema: any;
       }) => any;
     }[]
   ) =>
@@ -37,7 +38,7 @@ const derivative =
                 ref.id,
                 ref.path
               );
-              const newValue = await currDerivative.evaluate({
+              const newValue = await (currDerivative as any).evaluate.default({
                 row,
                 ref,
                 db,
@@ -45,6 +46,7 @@ const derivative =
                 storage,
                 utilFns,
                 logging,
+                tableSchema: tableSchema,
               });
               if (
                 newValue !== undefined &&

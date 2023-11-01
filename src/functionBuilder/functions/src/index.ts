@@ -6,7 +6,7 @@ const functionConfig: any = config;
 import { getTriggerType, changedDocPath } from "./utils";
 import propagate from "./propagates";
 import initialize from "./initialize";
-import searchSync from "./searchSync";
+
 export const R = {
   [functionConfig.functionName]: functions
     .region(functionConfig.region)
@@ -19,13 +19,17 @@ export const R = {
         .filter((extensionConfig) =>
           extensionConfig.triggers.includes(triggerType)
         )
-        .map((extensionConfig) =>
-          extension(
-            extensionConfig,
-            functionConfig.fieldTypes,
-            functionConfig.tableSchema
-          )(change, context)
-        );
+        .map((extensionConfig) => {
+          try {
+            extension(
+              extensionConfig,
+              functionConfig.fieldTypes,
+              functionConfig.tableSchema
+            )(change, context);
+          } catch (err) {
+            console.log(`caught error: ${err}`);
+          }
+        });
       console.log(
         `#${
           extensionPromises.length
@@ -65,14 +69,6 @@ export const R = {
         }
         if (Object.keys(docUpdates).length !== 0) {
           promises.push(change.after.ref.update(docUpdates));
-        }
-        if (functionConfig.searchIndices.length > 0) {
-          const searchSyncPromise = await searchSync(
-            functionConfig.searchIndices,
-            triggerType,
-            functionConfig.searchHost
-          )(change);
-          promises.concat(searchSyncPromise);
         }
         await Promise.all(promises);
       } catch (err) {

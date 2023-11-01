@@ -1,7 +1,7 @@
 import { db } from "../../../firebaseConfig";
 import {
-  serialiseDerivativeColumns,
   serialiseDefaultValueColumns,
+  serialiseDerivativeColumns,
   serialiseDocumentSelectColumns,
   serialiseExtension,
 } from "./serialisers";
@@ -140,10 +140,16 @@ export const generateFile = async (configData, buildFolderTimestamp) => {
     fieldTypes: JSON.stringify(fieldTypes),
     triggerPath: JSON.stringify(triggerPath),
     functionName: JSON.stringify(functionName),
-    derivativesConfig: serialiseDerivativeColumns(derivativeColumns),
-    defaultValueConfig: serialiseDefaultValueColumns(defaultValueColumns),
+    derivativesConfig: serialiseDerivativeColumns(
+      derivativeColumns,
+      buildFolderTimestamp
+    ),
+    defaultValueConfig: serialiseDefaultValueColumns(
+      defaultValueColumns,
+      buildFolderTimestamp
+    ),
     documentSelectConfig: serialiseDocumentSelectColumns(documentSelectColumns),
-    extensionsConfig: serialiseExtension(extensions),
+    extensionsConfig: serialiseExtension(extensions, buildFolderTimestamp),
     runtimeOptions: JSON.stringify({
       serviceAccount: `rowy-functions@${projectId}.iam.gserviceaccount.com`,
       ...runtimeOptions,

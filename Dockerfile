@@ -1,4 +1,4 @@
-FROM node:16-alpine
+FROM node:18-alpine
 
 # Create and change to the app directory.
 WORKDIR /home/node/app
@@ -13,6 +13,9 @@ COPY . ./
 RUN yarn
 RUN npx tsc
 RUN yarn build
+#  install ffmpeg
+RUN apk add --no-cache ffmpeg
+
 # Copy local code to the container image.
 
 

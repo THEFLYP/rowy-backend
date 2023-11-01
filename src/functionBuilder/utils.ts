@@ -1,4 +1,6 @@
 import admin from "firebase-admin";
+import { transform as sucraseTransform } from "sucrase";
+
 export function rowyUser(
   user: admin.auth.UserRecord,
   data?: Record<string, any>
@@ -62,7 +64,11 @@ export const getFunctionName = (
 ) => {
   switch (collectionType) {
     case "collection":
-      return `${collectionPath.replace(/-/g, "_")}`;
+      return `${collectionPath
+        .replace(/-/g, "_")
+        .split("/")
+        .filter((element, index) => index % 2 === 0)
+        .join("_")}`;
     case "collectionGroup":
       return `CG_${collectionPath.replace(/-/g, "_")}_D${depth}`;
     case "subCollection":
@@ -131,5 +137,40 @@ export const getSchemaPaths = ({
     case "subCollection":
     default:
       break;
+  }
+};
+
+export const transpile = (
+  importHeader: string,
+  code: string | undefined,
+  backwardsScript: string | undefined,
+  defaultExportName: string
+) => {
+  if (code) {
+    let transpiledCode = sucraseTransform(importHeader + code, {
+      transforms: ["typescript", "imports"],
+    }).code;
+
+    const defaultExportRegex = /exports\s*?\.\s*?default\s*?=/;
+    if (!defaultExportRegex.test(transpiledCode)) {
+      transpiledCode += `\nexports.default = ${defaultExportName};`;
+    }
+
+    return transpiledCode;
+  } else {
+    return `
+    ${importHeader}
+    exports.default = async function ${defaultExportName}({
+      row,
+      db,
+      ref,
+      auth,
+      logging,
+      tableSchema,
+      utilFns,
+      actionParams,
+      user,
+      storage,
+    }) {\n${backwardsScript}\n};`;
   }
 };
